@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,4 +5,129 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String          @id @default(cuid())
+  email          String          @unique
+  name           String?
+  password       String
+  role           Role            @default(RD)
+  createdAt      DateTime        @default(now())
+  demands        Demand[]
+  communications Communication[]
+  demandUpdates  DemandUpdate[]
+}
+
+enum Role {
+  BD
+  RD
+}
+
+model TechNode {
+  id          String     @id @default(cuid())
+  name        String
+  description String?
+  parentId    String?
+  parent      TechNode?  @relation("NodeChildren", fields: [parentId], references: [id])
+  children    TechNode[] @relation("NodeChildren")
+  order       Int        @default(0)
+  maturity    String?
+  createdAt   DateTime   @default(now())
+  partners    Partner[]
+  demands     Demand[]
+}
+
+model Partner {
+  id             String        @id @default(cuid())
+  name           String
+  type           PartnerType
+  contactName    String?
+  contactInfo    String?
+  status         PartnerStatus @default(POTENTIAL)
+  techNodeId     String
+  techNode       TechNode      @relation(fields: [techNodeId], references: [id])
+  customFields   Json?
+  createdAt      DateTime      @default(now())
+  communications Communication[]
+  demands        Demand[]
+}
+
+enum PartnerType {
+  COMPANY
+  UNIVERSITY
+  RESEARCH
+}
+
+enum PartnerStatus {
+  POTENTIAL
+  CONTACTED
+  COOPERATING
+  PAUSED
+}
+
+model FieldConfig {
+  id      String    @id @default(cuid())
+  label   String
+  type    FieldType
+  options String[]
+  order   Int       @default(0)
+}
+
+enum FieldType {
+  TEXT
+  NUMBER
+  SELECT
+  RATING
+}
+
+model Communication {
+  id        String   @id @default(cuid())
+  partnerId String
+  partner   Partner  @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  date      DateTime @default(now())
+  summary   String
+  nextStep  String?
+  createdBy String
+  user      User     @relation(fields: [createdBy], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model Demand {
+  id                String       @id @default(cuid())
+  title             String
+  description       String
+  urgency           Urgency      @default(MEDIUM)
+  status            DemandStatus @default(PENDING)
+  techNodeId        String
+  techNode          TechNode     @relation(fields: [techNodeId], references: [id])
+  createdBy         String
+  user              User         @relation(fields: [createdBy], references: [id])
+  assignedPartnerId String?
+  assignedPartner   Partner?     @relation(fields: [assignedPartnerId], references: [id])
+  updates           DemandUpdate[]
+  createdAt         DateTime     @default(now())
+}
+
+enum Urgency {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum DemandStatus {
+  PENDING
+  IN_PROGRESS
+  RESOLVED
+  NO_RESOURCE
+}
+
+model DemandUpdate {
+  id        String   @id @default(cuid())
+  demandId  String
+  demand    Demand   @relation(fields: [demandId], references: [id], onDelete: Cascade)
+  content   String
+  createdBy String
+  user      User     @relation(fields: [createdBy], references: [id])
+  createdAt DateTime @default(now())
 }
