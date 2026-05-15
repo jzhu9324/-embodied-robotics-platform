@@ -11,7 +11,7 @@ const statusClass: Record<string, string> = {
   PAUSED: 'bg-red-100 text-red-600',
 }
 
-export function NodeDetail({ node, role }: { node: any; role: 'BD' | 'RD' }) {
+export function NodeDetail({ node, role, onAddPartner }: { node: any; role: 'BD' | 'RD'; onAddPartner?: () => void }) {
   return (
     <div className="flex-1 min-w-0">
       <div className="bg-white rounded-xl border border-gray-200 p-6 mb-4">
@@ -31,7 +31,7 @@ export function NodeDetail({ node, role }: { node: any; role: 'BD' | 'RD' }) {
             </Link>
           )}
           {role === 'BD' && (
-            <Button size="sm">+ 添加合作方</Button>
+            <Button size="sm" onClick={onAddPartner}>+ 添加合作方</Button>
           )}
         </div>
         {node.description && (

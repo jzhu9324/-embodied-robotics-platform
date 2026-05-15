@@ -17,6 +17,7 @@ function NodeItem({
   onSelect,
   isAdmin,
   onAddNode,
+  onDeleteNode,
   depth,
 }: {
   node: TechNode
@@ -24,6 +25,7 @@ function NodeItem({
   onSelect: (node: TechNode) => void
   isAdmin: boolean
   onAddNode: (parentId: string | null) => void
+  onDeleteNode?: (nodeId: string) => void
   depth: number
 }) {
   const [expanded, setExpanded] = useState(true)
@@ -64,13 +66,20 @@ function NodeItem({
           </span>
 
           {isAdmin && (
-            <button
-              className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center text-blue-400 hover:text-blue-600 hover:bg-blue-100 rounded transition-all"
-              onClick={(e) => { e.stopPropagation(); onAddNode(node.id) }}
-              title="添加子节点"
-            >
-              +
-            </button>
+            <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 transition-all">
+              <button
+                className="w-5 h-5 flex items-center justify-center text-blue-400 hover:text-blue-600 hover:bg-blue-100 rounded"
+                onClick={(e) => { e.stopPropagation(); onAddNode(node.id) }}
+                title="添加子节点"
+              >+</button>
+              {onDeleteNode && (
+                <button
+                  className="w-5 h-5 flex items-center justify-center text-gray-300 hover:text-red-500 hover:bg-red-50 rounded text-xs"
+                  onClick={(e) => { e.stopPropagation(); onDeleteNode(node.id) }}
+                  title="删除节点"
+                >✕</button>
+              )}
+            </div>
           )}
         </div>
 
@@ -88,6 +97,7 @@ function NodeItem({
                     onSelect={onSelect}
                     isAdmin={isAdmin}
                     onAddNode={onAddNode}
+                    onDeleteNode={onDeleteNode}
                     depth={depth + 1}
                   />
                 </div>
@@ -135,13 +145,20 @@ function NodeItem({
         </span>
 
         {isAdmin && (
-          <button
-            className="opacity-0 group-hover:opacity-100 w-4 h-4 flex items-center justify-center text-blue-400 hover:text-blue-600 rounded text-xs transition-all"
-            onClick={(e) => { e.stopPropagation(); onAddNode(node.id) }}
-            title="添加子节点"
-          >
-            +
-          </button>
+          <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 transition-all">
+            <button
+              className="w-4 h-4 flex items-center justify-center text-blue-400 hover:text-blue-600 hover:bg-blue-50 rounded text-xs"
+              onClick={(e) => { e.stopPropagation(); onAddNode(node.id) }}
+              title="添加子节点"
+            >+</button>
+            {onDeleteNode && (
+              <button
+                className="w-4 h-4 flex items-center justify-center text-gray-300 hover:text-red-500 hover:bg-red-50 rounded text-xs"
+                onClick={(e) => { e.stopPropagation(); onDeleteNode(node.id) }}
+                title="删除节点"
+              >✕</button>
+            )}
+          </div>
         )}
       </div>
 
@@ -158,6 +175,7 @@ function NodeItem({
                   onSelect={onSelect}
                   isAdmin={isAdmin}
                   onAddNode={onAddNode}
+                  onDeleteNode={onDeleteNode}
                   depth={depth + 1}
                 />
               </div>
@@ -175,12 +193,14 @@ export function TreePanel({
   onSelect,
   isAdmin,
   onAddNode,
+  onDeleteNode,
 }: {
   nodes: TechNode[]
   selectedId: string | null
   onSelect: (node: TechNode) => void
   isAdmin: boolean
   onAddNode: (parentId: string | null) => void
+  onDeleteNode?: (nodeId: string) => void
 }) {
   return (
     <div className="w-[280px] shrink-0 bg-white rounded-xl border border-gray-200 p-3 overflow-y-auto max-h-[calc(100vh-100px)]">
@@ -198,6 +218,7 @@ export function TreePanel({
               onSelect={onSelect}
               isAdmin={isAdmin}
               onAddNode={onAddNode}
+              onDeleteNode={onDeleteNode}
               depth={0}
             />
           ))}
