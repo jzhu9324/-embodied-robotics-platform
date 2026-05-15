@@ -4,5 +4,11 @@ module.exports = {
     user: {
       findUnique: jest.fn(),
     },
+    techNode: {
+      findMany: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    },
   },
 }
