@@ -90,9 +90,34 @@ function AddNodeModal({
   )
 }
 
-export function TechTreeClient({ nodes, role }: { nodes: any[]; role: 'BD' | 'RD' }) {
+type FlatNode = {
+  id: string
+  name: string
+  parentId: string | null
+  _count: { partners: number; demands?: number }
+  partners?: any[]
+}
+
+type TreeNode = FlatNode & { children: TreeNode[] }
+
+function buildTree(flat: FlatNode[]): TreeNode[] {
+  const map = new Map<string, TreeNode>()
+  flat.forEach(n => map.set(n.id, { ...n, children: [] }))
+  const roots: TreeNode[] = []
+  flat.forEach(n => {
+    if (n.parentId && map.has(n.parentId)) {
+      map.get(n.parentId)!.children.push(map.get(n.id)!)
+    } else {
+      roots.push(map.get(n.id)!)
+    }
+  })
+  return roots
+}
+
+export function TechTreeClient({ nodes, role }: { nodes: FlatNode[]; role: 'BD' | 'RD' }) {
   const router = useRouter()
-  const [selectedNode, setSelectedNode] = useState<any>(nodes[0] ?? null)
+  const treeNodes = buildTree(nodes)
+  const [selectedNode, setSelectedNode] = useState<TreeNode | null>(treeNodes[0] ?? null)
   const [addingParentId, setAddingParentId] = useState<string | null | undefined>(undefined)
 
   function handleAddNode(parentId: string | null) {
@@ -123,9 +148,9 @@ export function TechTreeClient({ nodes, role }: { nodes: any[]; role: 'BD' | 'RD
       </div>
       <div className="p-7 flex gap-5">
         <TreePanel
-          nodes={nodes}
+          nodes={treeNodes}
           selectedId={selectedNode?.id ?? null}
-          onSelect={setSelectedNode}
+          onSelect={(node) => setSelectedNode(node)}
           isAdmin={role === 'BD'}
           onAddNode={handleAddNode}
         />

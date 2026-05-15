@@ -7,19 +7,11 @@ export default async function TechTreePage() {
   const role = (session?.user as any)?.role as 'BD' | 'RD'
 
   const nodes = await db.techNode.findMany({
-    where: { parentId: null },
-    orderBy: { order: 'asc' },
+    orderBy: [{ parentId: 'asc' }, { order: 'asc' }],
     include: {
-      children: {
-        orderBy: { order: 'asc' },
-        include: {
-          _count: { select: { partners: true } },
-          partners: true,
-        }
-      },
       _count: { select: { partners: true, demands: true } },
       partners: {
-        include: { techNode: true }
+        include: { techNode: { select: { name: true } } },
       },
     },
   })
