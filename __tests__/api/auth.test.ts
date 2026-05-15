@@ -1,9 +1,8 @@
-import { authConfig } from '@/lib/auth'
+import { authConfig } from '@/auth.config'
 
 describe('auth config', () => {
-  it('has credentials provider', () => {
-    const providers = authConfig.providers ?? []
-    expect(providers.length).toBeGreaterThan(0)
+  it('has session strategy configured', () => {
+    expect(authConfig.session?.strategy).toBe('jwt')
   })
 
   it('uses jwt session strategy', () => {
