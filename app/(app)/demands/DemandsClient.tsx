@@ -1,6 +1,8 @@
 'use client'
 import { useState } from 'react'
 
+type Partner = { id: string; name: string; type: string }
+
 type Demand = {
   id: string
   title: string
@@ -11,6 +13,7 @@ type Demand = {
   techNode: { name: string }
   user: { name: string | null }
   updates: { content: string }[]
+  assignedPartner: { id: string; name: string } | null
 }
 
 const statusOptions = [
@@ -20,10 +23,13 @@ const statusOptions = [
   { value: 'NO_RESOURCE', label: '暂无资源', cls: 'bg-red-100 text-red-500' },
 ]
 const urgencyLabel: Record<string, string> = { LOW: '低', MEDIUM: '中', HIGH: '高' }
+const typeLabel: Record<string, string> = { COMPANY: '企业', UNIVERSITY: '高校', RESEARCH: '科研机构' }
 
-function DemandRow({ demand }: { demand: Demand }) {
+function DemandRow({ demand, partners }: { demand: Demand; partners: Partner[] }) {
   const [status, setStatus] = useState(demand.status)
+  const [assignedPartner, setAssignedPartner] = useState(demand.assignedPartner)
   const [showUpdate, setShowUpdate] = useState(false)
+  const [showPartnerPicker, setShowPartnerPicker] = useState(false)
   const [updateContent, setUpdateContent] = useState('')
   const [latestUpdate, setLatestUpdate] = useState(demand.updates[0]?.content ?? '')
   const [saving, setSaving] = useState(false)
@@ -37,6 +43,16 @@ function DemandRow({ demand }: { demand: Demand }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: newStatus }),
     })
+  }
+
+  async function handleAssignPartner(partner: Partner | null) {
+    await fetch(`/api/demands/${demand.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ assignedPartnerId: partner?.id ?? null }),
+    })
+    setAssignedPartner(partner ? { id: partner.id, name: partner.name } : null)
+    setShowPartnerPicker(false)
   }
 
   async function handleAddUpdate() {
@@ -77,11 +93,42 @@ function DemandRow({ demand }: { demand: Demand }) {
         </div>
       </div>
 
-      <div className="flex gap-3 text-xs text-gray-400 mb-2">
+      <div className="flex gap-3 text-xs text-gray-400 mb-3">
         <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{demand.techNode.name}</span>
         <span>{demand.user.name}</span>
         <span>紧急：{urgencyLabel[demand.urgency]}</span>
         <span>{new Date(demand.createdAt).toLocaleDateString('zh-CN')}</span>
+      </div>
+
+      {/* Assigned partner */}
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-xs text-gray-400">跟进合作方：</span>
+        {assignedPartner ? (
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+              {assignedPartner.name}
+            </span>
+            <button
+              onClick={() => setShowPartnerPicker(true)}
+              className="text-xs text-gray-400 hover:text-blue-500"
+            >
+              更换
+            </button>
+            <button
+              onClick={() => handleAssignPartner(null)}
+              className="text-xs text-gray-400 hover:text-red-500"
+            >
+              移除
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setShowPartnerPicker(true)}
+            className="text-xs text-blue-500 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-2 py-0.5 rounded-full transition-colors"
+          >
+            + 指定合作方
+          </button>
+        )}
       </div>
 
       {latestUpdate && (
@@ -122,14 +169,47 @@ function DemandRow({ demand }: { demand: Demand }) {
           </button>
         </div>
       )}
+
+      {/* Partner picker modal */}
+      {showPartnerPicker && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={() => setShowPartnerPicker(false)}>
+          <div className="bg-white rounded-xl p-6 w-[420px] max-h-[480px] shadow-xl flex flex-col" onClick={e => e.stopPropagation()}>
+            <h3 className="text-base font-semibold mb-4">选择跟进合作方</h3>
+            <div className="flex-1 overflow-y-auto space-y-2">
+              {partners.map(p => (
+                <div
+                  key={p.id}
+                  className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors
+                    ${assignedPartner?.id === p.id
+                      ? 'border-blue-400 bg-blue-50'
+                      : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'}`}
+                  onClick={() => handleAssignPartner(p)}
+                >
+                  <span className="text-sm font-medium">{p.name}</span>
+                  <span className="text-xs text-gray-400">{typeLabel[p.type]}</span>
+                </div>
+              ))}
+              {partners.length === 0 && (
+                <p className="text-sm text-gray-400 text-center py-6">暂无合作方，请先在科技树中添加</p>
+              )}
+            </div>
+            <button
+              onClick={() => setShowPartnerPicker(false)}
+              className="mt-4 w-full py-2 text-sm text-gray-500 hover:bg-gray-100 rounded-lg"
+            >
+              取消
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
-export function DemandsClient({ demands }: { demands: Demand[] }) {
+export function DemandsClient({ demands, partners }: { demands: Demand[]; partners: Partner[] }) {
   return (
     <div className="bg-white rounded-xl border border-gray-200">
-      {demands.map(d => <DemandRow key={d.id} demand={d} />)}
+      {demands.map(d => <DemandRow key={d.id} demand={d} partners={partners} />)}
       {demands.length === 0 && (
         <div className="text-center py-12 text-gray-400 text-sm">暂无需求</div>
       )}

@@ -7,14 +7,21 @@ export default async function DemandsPage() {
   const session = await auth()
   if ((session?.user as any)?.role !== 'BD') redirect('/my-demands')
 
-  const demands = await db.demand.findMany({
-    include: {
-      techNode: { select: { name: true } },
-      user: { select: { name: true } },
-      updates: { orderBy: { createdAt: 'desc' }, take: 1 },
-    },
-    orderBy: { createdAt: 'desc' },
-  })
+  const [demands, partners] = await Promise.all([
+    db.demand.findMany({
+      include: {
+        techNode: { select: { name: true } },
+        user: { select: { name: true } },
+        updates: { orderBy: { createdAt: 'desc' }, take: 1 },
+        assignedPartner: { select: { id: true, name: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    }),
+    db.partner.findMany({
+      select: { id: true, name: true, type: true },
+      orderBy: { name: 'asc' },
+    }),
+  ])
 
   return (
     <div>
@@ -22,11 +29,14 @@ export default async function DemandsPage() {
         <span className="text-[15px] font-semibold">需求管理</span>
       </div>
       <div className="p-7">
-        <DemandsClient demands={demands.map(d => ({
-          ...d,
-          createdAt: d.createdAt.toISOString(),
-          updates: d.updates.map(u => ({ content: u.content })),
-        }))} />
+        <DemandsClient
+          partners={partners}
+          demands={demands.map(d => ({
+            ...d,
+            createdAt: d.createdAt.toISOString(),
+            updates: d.updates.map(u => ({ content: u.content })),
+          }))}
+        />
       </div>
     </div>
   )
