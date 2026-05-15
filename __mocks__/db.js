@@ -10,5 +10,14 @@ module.exports = {
       update: jest.fn(),
       delete: jest.fn(),
     },
+    partner: {
+      findMany: jest.fn(),
+      create: jest.fn(),
+      findUnique: jest.fn(),
+      update: jest.fn(),
+    },
+    communication: {
+      create: jest.fn(),
+    },
   },
 }
