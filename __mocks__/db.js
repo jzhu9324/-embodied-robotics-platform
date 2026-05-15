@@ -19,5 +19,13 @@ module.exports = {
     communication: {
       create: jest.fn(),
     },
+    demand: {
+      findMany: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+    },
+    demandUpdate: {
+      create: jest.fn(),
+    },
   },
 }
