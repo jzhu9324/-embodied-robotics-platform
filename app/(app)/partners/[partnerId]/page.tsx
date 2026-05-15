@@ -2,6 +2,7 @@ import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { notFound } from 'next/navigation'
 import { CommunicationTimeline } from '@/components/partners/CommunicationTimeline'
+import { LinkDemandSection } from '@/components/partners/LinkDemandSection'
 
 const statusLabel: Record<string, string> = {
   POTENTIAL: '潜在', CONTACTED: '已接触', COOPERATING: '合作中', PAUSED: '暂停',
@@ -74,18 +75,11 @@ export default async function PartnerDetailPage({ params }: { params: { partnerI
             />
           </div>
           <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <h3 className="text-sm font-semibold mb-4">关联研发需求</h3>
-            {partner.demands.length === 0 ? (
-              <div className="text-center py-8 text-gray-400 text-sm">暂无关联需求</div>
-            ) : (
-              <div className="space-y-2">
-                {partner.demands.map((d) => (
-                  <div key={d.id} className="p-3 bg-gray-50 rounded-lg text-sm">
-                    <span className="font-medium">{d.title}</span>
-                  </div>
-                ))}
-              </div>
-            )}
+            <LinkDemandSection
+              partnerId={partner.id}
+              initialDemands={partner.demands}
+              isAdmin={role === 'BD'}
+            />
           </div>
         </div>
       </div>
