@@ -3,8 +3,7 @@ import { PortalForm } from './PortalForm'
 
 export default async function PortalPage() {
   const nodes = await db.techNode.findMany({
-    orderBy: { order: 'asc' },
-    include: { children: { orderBy: { order: 'asc' } } },
+    orderBy: [{ parentId: 'asc' }, { order: 'asc' }],
   })
   return (
     <div>

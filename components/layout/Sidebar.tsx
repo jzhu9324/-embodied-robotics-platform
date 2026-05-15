@@ -8,7 +8,6 @@ const bdNav = [
   { href: '/tech-tree', label: '科技树' },
   { href: '/partners', label: '合作方库' },
   { href: '/demands', label: '需求管理' },
-  { href: '/portal', label: '提出需求' },
   { href: '/my-demands', label: '我的需求' },
 ]
 
