@@ -158,7 +158,7 @@ function AddPartnerModal({
 }
 
 export function PartnersClient({
-  partners,
+  partners: initialPartners,
   techNodes,
   role,
 }: {
@@ -167,6 +167,7 @@ export function PartnersClient({
   role: 'BD' | 'RD'
 }) {
   const router = useRouter()
+  const [partners, setPartners] = useState(initialPartners)
   const [showModal, setShowModal] = useState(false)
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
@@ -178,6 +179,12 @@ export function PartnersClient({
     const matchType = !filterType || p.type === filterType
     return matchSearch && matchStatus && matchType
   })
+
+  async function handleDelete(id: string) {
+    if (!confirm('确定删除该合作方？相关沟通记录也会一并删除。')) return
+    await fetch(`/api/partners/${id}`, { method: 'DELETE' })
+    setPartners(prev => prev.filter(p => p.id !== id))
+  }
 
   return (
     <div>
@@ -248,7 +255,7 @@ export function PartnersClient({
             </thead>
             <tbody>
               {filtered.map((p) => (
-                <tr key={p.id} className="border-b border-gray-50 hover:bg-gray-50">
+                <tr key={p.id} className="border-b border-gray-50 hover:bg-gray-50 group">
                   <td className="px-5 py-3 font-medium">{p.name}</td>
                   <td className="px-5 py-3 text-gray-500">
                     {p.type === 'UNIVERSITY' ? '高校' : p.type === 'COMPANY' ? '企业' : '科研机构'}
@@ -266,9 +273,20 @@ export function PartnersClient({
                     </span>
                   </td>
                   <td className="px-5 py-3">
-                    <Link href={`/partners/${p.id}`}>
-                      <Button variant="outline" size="sm">详情 →</Button>
-                    </Link>
+                    <div className="flex items-center gap-2">
+                      <Link href={`/partners/${p.id}`}>
+                        <Button variant="outline" size="sm">详情 →</Button>
+                      </Link>
+                      {role === 'BD' && (
+                        <button
+                          onClick={() => handleDelete(p.id)}
+                          className="text-xs text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                          title="删除合作方"
+                        >
+                          删除
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

@@ -34,3 +34,12 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   })
   return NextResponse.json(partner)
 }
+
+export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
+  const session = await auth()
+  if (!session || (session.user as any).role !== 'BD') {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+  await db.partner.delete({ where: { id: params.id } })
+  return new NextResponse(null, { status: 204 })
+}

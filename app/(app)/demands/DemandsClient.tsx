@@ -25,7 +25,7 @@ const statusOptions = [
 const urgencyLabel: Record<string, string> = { LOW: '低', MEDIUM: '中', HIGH: '高' }
 const typeLabel: Record<string, string> = { COMPANY: '企业', UNIVERSITY: '高校', RESEARCH: '科研机构' }
 
-function DemandRow({ demand, partners }: { demand: Demand; partners: Partner[] }) {
+function DemandRow({ demand, partners, onDelete }: { demand: Demand; partners: Partner[]; onDelete: (id: string) => void }) {
   const [status, setStatus] = useState(demand.status)
   const [assignedPartner, setAssignedPartner] = useState(demand.assignedPartner)
   const [showUpdate, setShowUpdate] = useState(false)
@@ -78,18 +78,32 @@ function DemandRow({ demand, partners }: { demand: Demand; partners: Partner[] }
           <h3 className="text-sm font-semibold">{demand.title}</h3>
           <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">{demand.description}</p>
         </div>
-        {/* Status selector */}
-        <div className="relative shrink-0">
-          <select
-            value={status}
-            onChange={(e) => handleStatusChange(e.target.value)}
-            className={`text-xs px-2 py-1 rounded-full border-0 cursor-pointer appearance-none pr-5 font-medium ${current.cls}`}
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Delete button */}
+          <button
+            onClick={async () => {
+              if (!confirm('确定删除该需求？')) return
+              await fetch(`/api/demands/${demand.id}`, { method: 'DELETE' })
+              onDelete(demand.id)
+            }}
+            className="text-xs text-gray-300 hover:text-red-500 transition-colors px-1"
+            title="删除需求"
           >
-            {statusOptions.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
-          <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] pointer-events-none">▾</span>
+            删除
+          </button>
+          {/* Status selector */}
+          <div className="relative">
+            <select
+              value={status}
+              onChange={(e) => handleStatusChange(e.target.value)}
+              className={`text-xs px-2 py-1 rounded-full border-0 cursor-pointer appearance-none pr-5 font-medium ${current.cls}`}
+            >
+              {statusOptions.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+            <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] pointer-events-none">▾</span>
+          </div>
         </div>
       </div>
 
@@ -206,7 +220,8 @@ function DemandRow({ demand, partners }: { demand: Demand; partners: Partner[] }
   )
 }
 
-export function DemandsClient({ demands, partners }: { demands: Demand[]; partners: Partner[] }) {
+export function DemandsClient({ demands: initialDemands, partners }: { demands: Demand[]; partners: Partner[] }) {
+  const [demands, setDemands] = useState(initialDemands)
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
   const [filterUrgency, setFilterUrgency] = useState('')
@@ -258,7 +273,14 @@ export function DemandsClient({ demands, partners }: { demands: Demand[]; partne
         )}
       </div>
       <div className="bg-white rounded-xl border border-gray-200">
-        {filtered.map(d => <DemandRow key={d.id} demand={d} partners={partners} />)}
+        {filtered.map(d => (
+          <DemandRow
+            key={d.id}
+            demand={d}
+            partners={partners}
+            onDelete={(id) => setDemands(prev => prev.filter(x => x.id !== id))}
+          />
+        ))}
         {filtered.length === 0 && (
           <div className="text-center py-12 text-gray-400 text-sm">
             {demands.length === 0 ? '暂无需求' : '没有符合条件的需求'}
