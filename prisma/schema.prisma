@@ -42,6 +42,7 @@ model Partner {
   id             String        @id @default(cuid())
   name           String
   type           PartnerType
+  source         PartnerSource @default(EXTERNAL)
   contactName    String?
   contactTitle   String?
   contactInfo    String?
@@ -53,6 +54,11 @@ model Partner {
   createdAt      DateTime      @default(now())
   communications Communication[]
   demands        Demand[]
+}
+
+enum PartnerSource {
+  INTERNAL
+  EXTERNAL
 }
 
 enum PartnerType {

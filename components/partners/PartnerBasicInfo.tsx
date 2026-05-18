@@ -29,6 +29,7 @@ export function PartnerBasicInfo({
   initialContactTitle,
   initialContactInfo,
   initialDescription,
+  initialSource,
   techNodeName,
   isAdmin,
 }: {
@@ -40,6 +41,7 @@ export function PartnerBasicInfo({
   initialContactTitle: string | null
   initialContactInfo: string | null
   initialDescription: string | null
+  initialSource: string
   techNodeName: string
   isAdmin: boolean
 }) {
@@ -47,6 +49,7 @@ export function PartnerBasicInfo({
   const [saving, setSaving] = useState(false)
   const [name, setName] = useState(initialName)
   const [type, setType] = useState(initialType)
+  const [source, setSource] = useState(initialSource)
   const [status, setStatus] = useState(initialStatus)
   const [contactName, setContactName] = useState(initialContactName ?? '')
   const [contactTitle, setContactTitle] = useState(initialContactTitle ?? '')
@@ -57,6 +60,7 @@ export function PartnerBasicInfo({
     setEditing(false)
     setName(initialName)
     setType(initialType)
+    setSource(initialSource)
     setStatus(initialStatus)
     setContactName(initialContactName ?? '')
     setContactTitle(initialContactTitle ?? '')
@@ -72,6 +76,7 @@ export function PartnerBasicInfo({
       body: JSON.stringify({
         name: name.trim() || initialName,
         type,
+        source,
         status,
         contactName: contactName.trim() || null,
         contactTitle: contactTitle.trim() || null,
@@ -97,6 +102,20 @@ export function PartnerBasicInfo({
             <h2 className="text-xl font-bold">{name}</h2>
           )}
           <div className="flex gap-2 mt-2 flex-wrap">
+            {editing ? (
+              <select
+                className="text-xs border border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                value={source}
+                onChange={e => setSource(e.target.value)}
+              >
+                <option value="EXTERNAL">外部</option>
+                <option value="INTERNAL">内部</option>
+              </select>
+            ) : (
+              <span className={`text-xs px-2 py-1 rounded-full ${source === 'INTERNAL' ? 'bg-indigo-100 text-indigo-600' : 'bg-gray-100 text-gray-500'}`}>
+                {source === 'INTERNAL' ? '内部' : '外部'}
+              </span>
+            )}
             {editing ? (
               <select
                 className="text-xs border border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"

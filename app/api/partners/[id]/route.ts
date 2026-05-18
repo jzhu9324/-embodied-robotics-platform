@@ -24,6 +24,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   const data: Record<string, unknown> = {}
   if (body.name !== undefined) data.name = body.name
   if (body.type !== undefined) data.type = body.type
+  if (body.source !== undefined) data.source = body.source
   if (body.contactName !== undefined) data.contactName = body.contactName
   if (body.contactTitle !== undefined) data.contactTitle = body.contactTitle
   if (body.contactInfo !== undefined) data.contactInfo = body.contactInfo

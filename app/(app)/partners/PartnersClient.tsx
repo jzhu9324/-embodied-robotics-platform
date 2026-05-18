@@ -9,6 +9,7 @@ type Partner = {
   id: string
   name: string
   type: string
+  source: string
   status: string
   contactName: string | null
   techNode: { name: string }
@@ -36,6 +37,7 @@ function AddPartnerModal({
 }) {
   const [name, setName] = useState('')
   const [type, setType] = useState<'COMPANY' | 'UNIVERSITY' | 'RESEARCH'>('COMPANY')
+  const [source, setSource] = useState<'EXTERNAL' | 'INTERNAL'>('EXTERNAL')
   const [techNodeId, setTechNodeId] = useState('')
   const [contactName, setContactName] = useState('')
   const [contactInfo, setContactInfo] = useState('')
@@ -52,8 +54,7 @@ function AddPartnerModal({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: name.trim(),
-          type,
+          name: name.trim(), type, source,
           contactName: contactName.trim() || null,
           contactInfo: contactInfo.trim() || null,
           techNodeId,
@@ -100,6 +101,17 @@ function AddPartnerModal({
                 >
                   {label}
                 </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="text-sm text-gray-600 block mb-1">来源</label>
+            <div className="flex gap-2">
+              {([['EXTERNAL', '外部'], ['INTERNAL', '内部']] as const).map(([val, label]) => (
+                <button key={val} type="button" onClick={() => setSource(val)}
+                  className={`flex-1 py-1.5 rounded-lg border text-sm transition-colors
+                    ${source === val ? 'border-blue-500 bg-blue-50 text-blue-600 font-medium' : 'border-gray-200 text-gray-500 hover:border-blue-300'}`}
+                >{label}</button>
               ))}
             </div>
           </div>
@@ -169,15 +181,17 @@ export function PartnersClient({
   const router = useRouter()
   const [partners, setPartners] = useState(initialPartners)
   const [showModal, setShowModal] = useState(false)
+  const [sourceTab, setSourceTab] = useState<'ALL' | 'EXTERNAL' | 'INTERNAL'>('ALL')
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
   const [filterType, setFilterType] = useState('')
 
   const filtered = partners.filter(p => {
+    const matchSource = sourceTab === 'ALL' || p.source === sourceTab
     const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase())
     const matchStatus = !filterStatus || p.status === filterStatus
     const matchType = !filterType || p.type === filterType
-    return matchSearch && matchStatus && matchType
+    return matchSource && matchSearch && matchStatus && matchType
   })
 
   async function handleDelete(id: string) {
@@ -206,6 +220,20 @@ export function PartnersClient({
         </div>
       </div>
       <div className="p-7">
+        {/* 内部/外部 Tab */}
+        <div className="flex gap-1 mb-4 bg-gray-100 rounded-lg p-1 w-fit">
+          {([['ALL', '全部'], ['EXTERNAL', '外部合作方'], ['INTERNAL', '内部合作方']] as const).map(([val, label]) => (
+            <button
+              key={val}
+              onClick={() => setSourceTab(val)}
+              className={`px-4 py-1.5 text-sm rounded-md transition-colors ${
+                sourceTab === val
+                  ? 'bg-white text-gray-800 font-medium shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >{label}</button>
+          ))}
+        </div>
         {/* 搜索和筛选栏 */}
         <div className="flex gap-3 mb-4">
           <input

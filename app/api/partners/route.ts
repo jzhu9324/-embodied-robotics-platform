@@ -27,6 +27,7 @@ export async function POST(req: Request) {
     data: {
       name: body.name,
       type: body.type,
+      source: body.source ?? 'EXTERNAL',
       contactName: body.contactName ?? null,
       contactInfo: body.contactInfo ?? null,
       status: body.status ?? 'POTENTIAL',

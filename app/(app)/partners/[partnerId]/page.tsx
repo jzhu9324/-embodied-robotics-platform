@@ -45,6 +45,7 @@ export default async function PartnerDetailPage({ params }: { params: { partnerI
           initialContactTitle={(partner as any).contactTitle ?? null}
           initialContactInfo={partner.contactInfo}
           initialDescription={(partner as any).description ?? null}
+          initialSource={(partner as any).source ?? 'EXTERNAL'}
           techNodeName={partner.techNode.name}
           isAdmin={role === 'BD'}
         />
