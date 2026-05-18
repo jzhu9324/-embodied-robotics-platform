@@ -207,12 +207,64 @@ function DemandRow({ demand, partners }: { demand: Demand; partners: Partner[] }
 }
 
 export function DemandsClient({ demands, partners }: { demands: Demand[]; partners: Partner[] }) {
+  const [search, setSearch] = useState('')
+  const [filterStatus, setFilterStatus] = useState('')
+  const [filterUrgency, setFilterUrgency] = useState('')
+
+  const filtered = demands.filter(d => {
+    const matchSearch = !search || d.title.toLowerCase().includes(search.toLowerCase())
+    const matchStatus = !filterStatus || d.status === filterStatus
+    const matchUrgency = !filterUrgency || d.urgency === filterUrgency
+    return matchSearch && matchStatus && matchUrgency
+  })
+
   return (
-    <div className="bg-white rounded-xl border border-gray-200">
-      {demands.map(d => <DemandRow key={d.id} demand={d} partners={partners} />)}
-      {demands.length === 0 && (
-        <div className="text-center py-12 text-gray-400 text-sm">暂无需求</div>
-      )}
+    <div>
+      <div className="flex gap-3 mb-4">
+        <input
+          className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm w-56 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          placeholder="搜索需求标题…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <select
+          className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+          value={filterStatus}
+          onChange={(e) => setFilterStatus(e.target.value)}
+        >
+          <option value="">所有状态</option>
+          <option value="PENDING">待处理</option>
+          <option value="IN_PROGRESS">跟进中</option>
+          <option value="RESOLVED">已解决</option>
+          <option value="NO_RESOURCE">暂无资源</option>
+        </select>
+        <select
+          className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+          value={filterUrgency}
+          onChange={(e) => setFilterUrgency(e.target.value)}
+        >
+          <option value="">所有紧急度</option>
+          <option value="HIGH">高</option>
+          <option value="MEDIUM">中</option>
+          <option value="LOW">低</option>
+        </select>
+        {(search || filterStatus || filterUrgency) && (
+          <button
+            className="text-sm text-gray-400 hover:text-gray-600"
+            onClick={() => { setSearch(''); setFilterStatus(''); setFilterUrgency('') }}
+          >
+            清除筛选
+          </button>
+        )}
+      </div>
+      <div className="bg-white rounded-xl border border-gray-200">
+        {filtered.map(d => <DemandRow key={d.id} demand={d} partners={partners} />)}
+        {filtered.length === 0 && (
+          <div className="text-center py-12 text-gray-400 text-sm">
+            {demands.length === 0 ? '暂无需求' : '没有符合条件的需求'}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

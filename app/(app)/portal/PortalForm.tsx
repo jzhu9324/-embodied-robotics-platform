@@ -5,6 +5,19 @@ import { Button } from '@/components/ui/button'
 
 type FlatNode = { id: string; name: string; parentId: string | null }
 type TreeNode = FlatNode & { children: TreeNode[] }
+type Partner = { id: string; name: string; type: string; status: string; techNodeId: string }
+
+const partnerTypeLabel: Record<string, string> = {
+  COMPANY: '企业', UNIVERSITY: '高校', RESEARCH: '科研机构',
+}
+const partnerStatusLabel: Record<string, string> = {
+  POTENTIAL: '潜在', CONTACTED: '已接触', COOPERATING: '合作中',
+}
+const partnerStatusClass: Record<string, string> = {
+  POTENTIAL: 'bg-gray-100 text-gray-500',
+  CONTACTED: 'bg-orange-100 text-orange-600',
+  COOPERATING: 'bg-green-100 text-green-600',
+}
 
 function buildTree(flat: FlatNode[]): TreeNode[] {
   const map = new Map<string, TreeNode>()
@@ -84,7 +97,7 @@ function TreeNodeItem({
   )
 }
 
-export function PortalForm({ nodes }: { nodes: FlatNode[] }) {
+export function PortalForm({ nodes, partners }: { nodes: FlatNode[]; partners: Partner[] }) {
   const router = useRouter()
   const treeNodes = buildTree(nodes)
   const [title, setTitle] = useState('')
@@ -94,6 +107,10 @@ export function PortalForm({ nodes }: { nodes: FlatNode[] }) {
   const [techNodeName, setTechNodeName] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+
+  const relatedPartners = techNodeId
+    ? partners.filter(p => p.techNodeId === techNodeId)
+    : []
 
   function handleSelectNode(id: string, name: string) {
     setTechNodeId(id)
@@ -161,6 +178,33 @@ export function PortalForm({ nodes }: { nodes: FlatNode[] }) {
             ))
           )}
         </div>
+
+        {/* 相关合作方展示 */}
+        {techNodeId && (
+          <div className="mt-3">
+            {relatedPartners.length > 0 ? (
+              <div>
+                <p className="text-xs text-gray-400 mb-2">该方向现有合作方（供参考，BD 会跟进匹配）：</p>
+                <div className="flex flex-wrap gap-2">
+                  {relatedPartners.map(p => (
+                    <div
+                      key={p.id}
+                      className="flex items-center gap-1.5 bg-white border border-gray-200 rounded-lg px-3 py-1.5"
+                    >
+                      <span className="text-xs font-medium text-gray-700">{p.name}</span>
+                      <span className="text-[11px] text-gray-400">{partnerTypeLabel[p.type]}</span>
+                      <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${partnerStatusClass[p.status] ?? 'bg-gray-100 text-gray-500'}`}>
+                        {partnerStatusLabel[p.status] ?? p.status}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-gray-400">该方向暂无已录入合作方，提交后 BD 团队会寻找资源</p>
+            )}
+          </div>
+        )}
       </div>
 
       <div>
