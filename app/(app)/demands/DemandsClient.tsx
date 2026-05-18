@@ -72,21 +72,21 @@ function DemandRow({ demand, partners, onDelete }: { demand: Demand; partners: P
   }
 
   return (
-    <div className="p-5 border-b border-gray-50 last:border-0">
+    <div className="p-5 border-b border-gray-50 last:border-0 group/row relative">
       <div className="flex items-start justify-between mb-2 gap-4">
         <div className="flex-1 min-w-0">
           <h3 className="text-sm font-semibold">{demand.title}</h3>
           <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">{demand.description}</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          {/* Delete button */}
+          {/* Delete button — visible on row hover */}
           <button
             onClick={async () => {
               if (!confirm('确定删除该需求？')) return
               await fetch(`/api/demands/${demand.id}`, { method: 'DELETE' })
               onDelete(demand.id)
             }}
-            className="text-xs text-gray-300 hover:text-red-500 transition-colors px-1"
+            className="opacity-0 group-hover/row:opacity-100 transition-opacity text-xs text-gray-400 hover:text-red-500 hover:bg-red-50 px-2 py-1 rounded-lg"
             title="删除需求"
           >
             删除
