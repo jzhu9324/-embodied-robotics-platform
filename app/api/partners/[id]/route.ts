@@ -21,16 +21,16 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   const body = await req.json()
+  const data: Record<string, unknown> = {}
+  if (body.name !== undefined) data.name = body.name
+  if (body.type !== undefined) data.type = body.type
+  if (body.contactName !== undefined) data.contactName = body.contactName
+  if (body.contactInfo !== undefined) data.contactInfo = body.contactInfo
+  if (body.status !== undefined) data.status = body.status
+  if (body.customFields !== undefined) data.customFields = body.customFields
   const partner = await db.partner.update({
     where: { id: params.id },
-    data: {
-      name: body.name,
-      type: body.type,
-      contactName: body.contactName,
-      contactInfo: body.contactInfo,
-      status: body.status,
-      customFields: body.customFields,
-    },
+    data,
   })
   return NextResponse.json(partner)
 }

@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { notFound } from 'next/navigation'
 import { CommunicationTimeline } from '@/components/partners/CommunicationTimeline'
 import { LinkDemandSection } from '@/components/partners/LinkDemandSection'
+import { CustomFieldsSection } from '@/components/partners/CustomFieldsSection'
 
 const statusLabel: Record<string, string> = {
   POTENTIAL: '潜在', CONTACTED: '已接触', COOPERATING: '合作中', PAUSED: '暂停',
@@ -12,17 +13,20 @@ export default async function PartnerDetailPage({ params }: { params: { partnerI
   const session = await auth()
   const role = (session?.user as any)?.role as 'BD' | 'RD'
 
-  const partner = await db.partner.findUnique({
-    where: { id: params.partnerId },
-    include: {
-      techNode: true,
-      communications: {
-        orderBy: { date: 'desc' },
-        include: { user: { select: { name: true } } },
+  const [partner, fieldConfigs] = await Promise.all([
+    db.partner.findUnique({
+      where: { id: params.partnerId },
+      include: {
+        techNode: true,
+        communications: {
+          orderBy: { date: 'desc' },
+          include: { user: { select: { name: true } } },
+        },
+        demands: { select: { id: true, title: true, status: true } },
       },
-      demands: { select: { id: true, title: true, status: true } },
-    },
-  })
+    }),
+    db.fieldConfig.findMany({ orderBy: { order: 'asc' } }),
+  ])
   if (!partner) notFound()
 
   return (
@@ -62,7 +66,17 @@ export default async function PartnerDetailPage({ params }: { params: { partnerI
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        {/* 自定义字段 */}
+        {fieldConfigs.length > 0 && (
+          <CustomFieldsSection
+            partnerId={partner.id}
+            configs={fieldConfigs}
+            initialValues={(partner.customFields as Record<string, unknown>) ?? {}}
+            isAdmin={role === 'BD'}
+          />
+        )}
+
+        <div className="grid grid-cols-2 gap-4 mt-4">
           <div className="bg-white rounded-xl border border-gray-200 p-5">
             <h3 className="text-sm font-semibold mb-4">沟通记录</h3>
             <CommunicationTimeline

@@ -94,6 +94,7 @@ type FlatNode = {
   id: string
   name: string
   parentId: string | null
+  order: number
   _count: { partners: number; demands?: number }
   partners?: any[]
 }
@@ -232,9 +233,10 @@ function AddPartnerModal({
   )
 }
 
-export function TechTreeClient({ nodes, role }: { nodes: FlatNode[]; role: 'BD' | 'RD' }) {
+export function TechTreeClient({ nodes: initialNodes, role }: { nodes: FlatNode[]; role: 'BD' | 'RD' }) {
   const router = useRouter()
-  const treeNodes = buildTree(nodes)
+  const [flatNodes, setFlatNodes] = useState(initialNodes)
+  const treeNodes = buildTree(flatNodes)
   const [selectedNode, setSelectedNode] = useState<TreeNode | null>(treeNodes[0] ?? null)
   const [addingParentId, setAddingParentId] = useState<string | null | undefined>(undefined)
   const [addingPartnerForNodeId, setAddingPartnerForNodeId] = useState<string | null>(null)
@@ -259,6 +261,20 @@ export function TechTreeClient({ nodes, role }: { nodes: FlatNode[]; role: 'BD' 
     router.refresh()
   }
 
+  async function handleReorder(siblings: { id: string; order: number }[]) {
+    // Optimistic update
+    setFlatNodes(prev => {
+      const orderMap = new Map(siblings.map(s => [s.id, s.order]))
+      return prev.map(n => orderMap.has(n.id) ? { ...n, order: orderMap.get(n.id)! } : n)
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+    })
+    await fetch('/api/tech-nodes/reorder', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nodes: siblings }),
+    })
+  }
+
   return (
     <div>
       <div className="sticky top-0 bg-white border-b border-gray-200 px-7 h-[52px] flex items-center justify-between z-10">
@@ -280,6 +296,7 @@ export function TechTreeClient({ nodes, role }: { nodes: FlatNode[]; role: 'BD' 
           isAdmin={role === 'BD'}
           onAddNode={handleAddNode}
           onDeleteNode={handleDeleteNode}
+          onReorder={handleReorder}
         />
         {selectedNode ? (
           <NodeDetail

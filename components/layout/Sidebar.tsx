@@ -9,6 +9,7 @@ const bdNav = [
   { href: '/partners', label: '合作方库' },
   { href: '/demands', label: '需求管理' },
   { href: '/my-demands', label: '我的需求' },
+  { href: '/admin', label: '后台管理' },
 ]
 
 const rdNav = [
