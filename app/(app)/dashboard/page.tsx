@@ -50,7 +50,7 @@ export default async function DashboardPage() {
 
         <div className="grid grid-cols-4 gap-4 mb-6">
           {[
-            { label: '技术节点', value: nodeCount, color: 'text-blue-500' },
+            { label: '技术栈', value: nodeCount, color: 'text-blue-500' },
             { label: '合作方总数', value: partnerCount, color: 'text-green-500' },
             { label: '待处理需求', value: pendingDemands, color: 'text-orange-500' },
             { label: '沟通记录', value: communications, color: 'text-gray-700' },
