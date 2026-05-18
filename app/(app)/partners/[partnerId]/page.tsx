@@ -1,13 +1,11 @@
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { notFound } from 'next/navigation'
+import Link from 'next/link'
 import { CommunicationTimeline } from '@/components/partners/CommunicationTimeline'
 import { LinkDemandSection } from '@/components/partners/LinkDemandSection'
 import { CustomFieldsSection } from '@/components/partners/CustomFieldsSection'
-
-const statusLabel: Record<string, string> = {
-  POTENTIAL: '潜在', CONTACTED: '已接触', COOPERATING: '合作中', PAUSED: '暂停',
-}
+import { PartnerBasicInfo } from '@/components/partners/PartnerBasicInfo'
 
 export default async function PartnerDetailPage({ params }: { params: { partnerId: string } }) {
   const session = await auth()
@@ -31,48 +29,32 @@ export default async function PartnerDetailPage({ params }: { params: { partnerI
 
   return (
     <div>
-      <div className="sticky top-0 bg-white border-b border-gray-200 px-7 h-[52px] flex items-center z-10">
+      <div className="sticky top-0 bg-white border-b border-gray-200 px-7 h-[52px] flex items-center gap-2 z-10">
+        <Link href="/partners" className="text-gray-400 hover:text-gray-600 text-sm">合作方库</Link>
+        <span className="text-gray-300">/</span>
         <span className="text-[15px] font-semibold">{partner.name}</span>
       </div>
       <div className="p-7">
-        <div className="bg-white rounded-xl border border-gray-200 p-6 mb-4">
-          <div className="flex items-start justify-between">
-            <div>
-              <h2 className="text-xl font-bold">{partner.name}</h2>
-              <div className="flex gap-2 mt-2">
-                <span className="text-xs bg-purple-100 text-purple-600 px-2 py-1 rounded-full">
-                  {partner.type === 'UNIVERSITY' ? '高校' : partner.type === 'COMPANY' ? '企业' : '科研机构'}
-                </span>
-                <span className="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded-full">
-                  {partner.techNode.name}
-                </span>
-                <span className="text-xs bg-orange-100 text-orange-600 px-2 py-1 rounded-full">
-                  {statusLabel[partner.status]}
-                </span>
-              </div>
-            </div>
-          </div>
-          <div className="mt-4 grid grid-cols-3 gap-3">
-            {[
-              { label: '联系人', value: partner.contactName ?? '—' },
-              { label: '联系方式', value: partner.contactInfo ?? '—' },
-              { label: '状态', value: statusLabel[partner.status] },
-            ].map((item) => (
-              <div key={item.label} className="bg-gray-50 rounded-lg p-3">
-                <div className="text-xs text-gray-400 mb-1">{item.label}</div>
-                <div className="text-sm font-medium">{item.value}</div>
-              </div>
-            ))}
-          </div>
-        </div>
+        {/* 基本信息（可编辑） */}
+        <PartnerBasicInfo
+          partnerId={partner.id}
+          initialName={partner.name}
+          initialType={partner.type}
+          initialStatus={partner.status}
+          initialContactName={partner.contactName}
+          initialContactInfo={partner.contactInfo}
+          techNodeName={partner.techNode.name}
+          isAdmin={role === 'BD'}
+        />
 
         {/* 自定义字段 */}
-        {fieldConfigs.length > 0 && (
+        {role === 'BD' && (
           <CustomFieldsSection
             partnerId={partner.id}
             configs={fieldConfigs}
             initialValues={(partner.customFields as Record<string, unknown>) ?? {}}
-            isAdmin={role === 'BD'}
+            isAdmin={true}
+            emptyHint={fieldConfigs.length === 0}
           />
         )}
 

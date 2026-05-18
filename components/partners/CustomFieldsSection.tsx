@@ -31,18 +31,30 @@ export function CustomFieldsSection({
   configs,
   initialValues,
   isAdmin,
+  emptyHint = false,
 }: {
   partnerId: string
   configs: FieldConfig[]
   initialValues: Record<string, unknown>
   isAdmin: boolean
+  emptyHint?: boolean
 }) {
   const [values, setValues] = useState<Record<string, unknown>>(initialValues)
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [draft, setDraft] = useState<Record<string, unknown>>(initialValues)
 
-  if (configs.length === 0) return null
+  if (configs.length === 0) {
+    if (!emptyHint) return null
+    return (
+      <div className="bg-white rounded-xl border border-dashed border-gray-200 p-5 mt-4">
+        <p className="text-sm text-gray-400 text-center">
+          暂未配置自定义字段 —{' '}
+          <a href="/admin" className="text-blue-500 hover:underline">前往后台管理添加</a>
+        </p>
+      </div>
+    )
+  }
 
   function handleEdit() {
     setDraft({ ...values })

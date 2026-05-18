@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { TreePanel } from '@/components/tech-tree/TreePanel'
 import { NodeDetail } from '@/components/tech-tree/NodeDetail'
@@ -236,6 +236,9 @@ function AddPartnerModal({
 export function TechTreeClient({ nodes: initialNodes, role }: { nodes: FlatNode[]; role: 'BD' | 'RD' }) {
   const router = useRouter()
   const [flatNodes, setFlatNodes] = useState(initialNodes)
+
+  // 同步 server 刷新后的新 props
+  useEffect(() => { setFlatNodes(initialNodes) }, [initialNodes])
   const treeNodes = buildTree(flatNodes)
   const [selectedNode, setSelectedNode] = useState<TreeNode | null>(treeNodes[0] ?? null)
   const [addingParentId, setAddingParentId] = useState<string | null | undefined>(undefined)
