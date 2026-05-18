@@ -15,6 +15,9 @@ const statusClass: Record<string, string> = {
   COOPERATING: 'bg-green-100 text-green-600',
   PAUSED: 'bg-red-100 text-red-500',
 }
+const typeLabel: Record<string, string> = {
+  COMPANY: '企业', UNIVERSITY: '高校', RESEARCH: '科研机构',
+}
 
 export function PartnerBasicInfo({
   partnerId,
@@ -22,7 +25,9 @@ export function PartnerBasicInfo({
   initialType,
   initialStatus,
   initialContactName,
+  initialContactTitle,
   initialContactInfo,
+  initialDescription,
   techNodeName,
   isAdmin,
 }: {
@@ -31,7 +36,9 @@ export function PartnerBasicInfo({
   initialType: string
   initialStatus: string
   initialContactName: string | null
+  initialContactTitle: string | null
   initialContactInfo: string | null
+  initialDescription: string | null
   techNodeName: string
   isAdmin: boolean
 }) {
@@ -40,10 +47,18 @@ export function PartnerBasicInfo({
   const [name, setName] = useState(initialName)
   const [status, setStatus] = useState(initialStatus)
   const [contactName, setContactName] = useState(initialContactName ?? '')
+  const [contactTitle, setContactTitle] = useState(initialContactTitle ?? '')
   const [contactInfo, setContactInfo] = useState(initialContactInfo ?? '')
+  const [description, setDescription] = useState(initialDescription ?? '')
 
-  const typeLabel: Record<string, string> = {
-    COMPANY: '企业', UNIVERSITY: '高校', RESEARCH: '科研机构',
+  function handleCancel() {
+    setEditing(false)
+    setName(initialName)
+    setStatus(initialStatus)
+    setContactName(initialContactName ?? '')
+    setContactTitle(initialContactTitle ?? '')
+    setContactInfo(initialContactInfo ?? '')
+    setDescription(initialDescription ?? '')
   }
 
   async function handleSave() {
@@ -55,7 +70,9 @@ export function PartnerBasicInfo({
         name: name.trim() || initialName,
         status,
         contactName: contactName.trim() || null,
+        contactTitle: contactTitle.trim() || null,
         contactInfo: contactInfo.trim() || null,
+        description: description.trim() || null,
       }),
     })
     setSaving(false)
@@ -64,7 +81,7 @@ export function PartnerBasicInfo({
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-6 mb-4">
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between mb-4">
         <div>
           {editing ? (
             <input
@@ -99,13 +116,7 @@ export function PartnerBasicInfo({
                   {saving ? '保存中...' : '保存'}
                 </button>
                 <button
-                  onClick={() => {
-                    setEditing(false)
-                    setName(initialName)
-                    setStatus(initialStatus)
-                    setContactName(initialContactName ?? '')
-                    setContactInfo(initialContactInfo ?? '')
-                  }}
+                  onClick={handleCancel}
                   className="text-sm text-gray-500 hover:bg-gray-100 px-3 py-1.5 rounded-lg"
                 >
                   取消
@@ -123,18 +134,50 @@ export function PartnerBasicInfo({
         )}
       </div>
 
-      <div className="mt-4 grid grid-cols-3 gap-3">
+      {/* 背景介绍 */}
+      <div className="mb-4">
+        <div className="text-xs text-gray-400 mb-1.5">背景介绍</div>
+        {editing ? (
+          <textarea
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-400"
+            rows={3}
+            placeholder="机构背景、技术方向、核心优势等"
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+          />
+        ) : (
+          <div className={`text-sm ${description ? 'text-gray-700' : 'text-gray-300'}`}>
+            {description || (isAdmin ? '点击"编辑"添加背景介绍' : '暂无')}
+          </div>
+        )}
+      </div>
+
+      {/* 联系信息 */}
+      <div className="grid grid-cols-4 gap-3">
         <div className="bg-gray-50 rounded-lg p-3">
           <div className="text-xs text-gray-400 mb-1">联系人</div>
           {editing ? (
             <input
               className="w-full text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
-              placeholder="请输入联系人"
+              placeholder="姓名"
               value={contactName}
               onChange={e => setContactName(e.target.value)}
             />
           ) : (
             <div className="text-sm font-medium">{contactName || '—'}</div>
+          )}
+        </div>
+        <div className="bg-gray-50 rounded-lg p-3">
+          <div className="text-xs text-gray-400 mb-1">职位</div>
+          {editing ? (
+            <input
+              className="w-full text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
+              placeholder="职位/职称"
+              value={contactTitle}
+              onChange={e => setContactTitle(e.target.value)}
+            />
+          ) : (
+            <div className="text-sm font-medium">{contactTitle || '—'}</div>
           )}
         </div>
         <div className="bg-gray-50 rounded-lg p-3">

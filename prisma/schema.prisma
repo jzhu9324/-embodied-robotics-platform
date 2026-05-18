@@ -43,7 +43,9 @@ model Partner {
   name           String
   type           PartnerType
   contactName    String?
+  contactTitle   String?
   contactInfo    String?
+  description    String?
   status         PartnerStatus @default(POTENTIAL)
   techNodeId     String
   techNode       TechNode      @relation(fields: [techNodeId], references: [id])

@@ -25,7 +25,9 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   if (body.name !== undefined) data.name = body.name
   if (body.type !== undefined) data.type = body.type
   if (body.contactName !== undefined) data.contactName = body.contactName
+  if (body.contactTitle !== undefined) data.contactTitle = body.contactTitle
   if (body.contactInfo !== undefined) data.contactInfo = body.contactInfo
+  if (body.description !== undefined) data.description = body.description
   if (body.status !== undefined) data.status = body.status
   if (body.customFields !== undefined) data.customFields = body.customFields
   const partner = await db.partner.update({
