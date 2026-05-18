@@ -124,6 +124,38 @@ function AddPartnerModal({
   onClose: () => void
   onSuccess: () => void
 }) {
+  const [tab, setTab] = useState<'existing' | 'new'>('existing')
+
+  // ── 从已有合作方中选择 ──
+  const [allPartners, setAllPartners] = useState<{ id: string; name: string; type: string; techNode: { name: string } }[]>([])
+  const [loadingPartners, setLoadingPartners] = useState(false)
+  const [search, setSearch] = useState('')
+  const [linking, setLinking] = useState(false)
+
+  useEffect(() => {
+    setLoadingPartners(true)
+    fetch('/api/partners')
+      .then(r => r.json())
+      .then(data => { setAllPartners(data); setLoadingPartners(false) })
+      .catch(() => setLoadingPartners(false))
+  }, [])
+
+  const filtered = allPartners.filter(p =>
+    !search || p.name.toLowerCase().includes(search.toLowerCase())
+  )
+
+  async function handleLink(partnerId: string) {
+    setLinking(true)
+    await fetch(`/api/partners/${partnerId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ techNodeId }),
+    })
+    setLinking(false)
+    onSuccess()
+  }
+
+  // ── 新建合作方 ──
   const [name, setName] = useState('')
   const [type, setType] = useState<'COMPANY' | 'UNIVERSITY' | 'RESEARCH'>('COMPANY')
   const [contactName, setContactName] = useState('')
@@ -141,18 +173,13 @@ function AddPartnerModal({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: name.trim(),
-          type,
+          name: name.trim(), type,
           contactName: contactName.trim() || null,
           contactInfo: contactInfo.trim() || null,
           techNodeId,
         }),
       })
-      if (!res.ok) {
-        const data = await res.json()
-        setError(data.error ?? '创建失败')
-        return
-      }
+      if (!res.ok) { setError((await res.json()).error ?? '创建失败'); return }
       onSuccess()
     } catch {
       setError('网络错误，请重试')
@@ -161,73 +188,112 @@ function AddPartnerModal({
     }
   }
 
+  const typeLabel: Record<string, string> = { COMPANY: '企业', UNIVERSITY: '高校', RESEARCH: '科研机构' }
+
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-white rounded-xl p-6 w-[440px] shadow-xl" onClick={(e) => e.stopPropagation()}>
-        <h3 className="text-base font-semibold mb-4">添加合作方</h3>
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <div>
-            <label className="text-sm text-gray-600 block mb-1">名称 <span className="text-red-500">*</span></label>
-            <input
-              autoFocus
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-              placeholder="如：某科技有限公司"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
+      <div className="bg-white rounded-xl w-[480px] shadow-xl" onClick={e => e.stopPropagation()}>
+        {/* Tab header */}
+        <div className="flex border-b border-gray-100 px-6 pt-5">
+          <h3 className="text-base font-semibold mr-6">添加合作方</h3>
+          <div className="flex gap-4">
+            {([['existing', '从已有选择'], ['new', '新建']] as const).map(([key, label]) => (
+              <button
+                key={key}
+                onClick={() => setTab(key)}
+                className={`pb-3 text-sm border-b-2 transition-colors ${
+                  tab === key ? 'border-blue-500 text-blue-600 font-medium' : 'border-transparent text-gray-400 hover:text-gray-600'
+                }`}
+              >{label}</button>
+            ))}
           </div>
-          <div>
-            <label className="text-sm text-gray-600 block mb-1">类型</label>
-            <div className="flex gap-2">
-              {([['COMPANY', '企业'], ['UNIVERSITY', '高校'], ['RESEARCH', '科研机构']] as const).map(([val, label]) => (
-                <button
-                  key={val}
-                  type="button"
-                  onClick={() => setType(val)}
-                  className={`flex-1 py-1.5 rounded-lg border text-sm transition-colors
-                    ${type === val ? 'border-blue-500 bg-blue-50 text-blue-600 font-medium' : 'border-gray-200 text-gray-500 hover:border-blue-300'}`}
-                >
-                  {label}
-                </button>
-              ))}
+        </div>
+
+        <div className="p-6">
+          {tab === 'existing' ? (
+            <div>
+              <input
+                autoFocus
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                placeholder="搜索合作方名称…"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+              />
+              <div className="space-y-1 max-h-[280px] overflow-y-auto">
+                {loadingPartners ? (
+                  <p className="text-sm text-gray-400 text-center py-6">加载中…</p>
+                ) : filtered.length === 0 ? (
+                  <p className="text-sm text-gray-400 text-center py-6">
+                    {search ? '没有匹配的合作方' : '暂无已登记的合作方'}
+                  </p>
+                ) : filtered.map(p => (
+                  <div
+                    key={p.id}
+                    className="flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-gray-50 group"
+                  >
+                    <div>
+                      <span className="text-sm font-medium">{p.name}</span>
+                      <span className="text-xs text-gray-400 ml-2">{typeLabel[p.type]}</span>
+                      <span className="text-xs text-gray-300 ml-2">当前：{p.techNode.name}</span>
+                    </div>
+                    <button
+                      onClick={() => handleLink(p.id)}
+                      disabled={linking}
+                      className="opacity-0 group-hover:opacity-100 text-xs bg-blue-500 text-white px-3 py-1 rounded-lg hover:bg-blue-600 disabled:opacity-50 transition-all"
+                    >
+                      关联到此节点
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-end mt-4">
+                <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">关闭</button>
+              </div>
             </div>
-          </div>
-          <div>
-            <label className="text-sm text-gray-600 block mb-1">联系人</label>
-            <input
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-              placeholder="可选"
-              value={contactName}
-              onChange={(e) => setContactName(e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="text-sm text-gray-600 block mb-1">联系方式</label>
-            <input
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-              placeholder="手机 / 邮箱（可选）"
-              value={contactInfo}
-              onChange={(e) => setContactInfo(e.target.value)}
-            />
-          </div>
-          {error && <p className="text-sm text-red-500">{error}</p>}
-          <div className="flex gap-2 justify-end pt-1">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
-            >
-              取消
-            </button>
-            <button
-              type="submit"
-              disabled={loading || !name.trim()}
-              className="px-4 py-2 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50"
-            >
-              {loading ? '创建中...' : '创建'}
-            </button>
-          </div>
-        </form>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-3">
+              <div>
+                <label className="text-sm text-gray-600 block mb-1">名称 <span className="text-red-500">*</span></label>
+                <input
+                  autoFocus
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  placeholder="如：某科技有限公司"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-sm text-gray-600 block mb-1">类型</label>
+                <div className="flex gap-2">
+                  {([['COMPANY', '企业'], ['UNIVERSITY', '高校'], ['RESEARCH', '科研机构']] as const).map(([val, label]) => (
+                    <button key={val} type="button" onClick={() => setType(val)}
+                      className={`flex-1 py-1.5 rounded-lg border text-sm transition-colors
+                        ${type === val ? 'border-blue-500 bg-blue-50 text-blue-600 font-medium' : 'border-gray-200 text-gray-500 hover:border-blue-300'}`}
+                    >{label}</button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-sm text-gray-600 block mb-1">联系人</label>
+                <input className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  placeholder="可选" value={contactName} onChange={e => setContactName(e.target.value)} />
+              </div>
+              <div>
+                <label className="text-sm text-gray-600 block mb-1">联系方式</label>
+                <input className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  placeholder="手机 / 邮箱（可选）" value={contactInfo} onChange={e => setContactInfo(e.target.value)} />
+              </div>
+              {error && <p className="text-sm text-red-500">{error}</p>}
+              <div className="flex gap-2 justify-end pt-1">
+                <button type="button" onClick={onClose} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">取消</button>
+                <button type="submit" disabled={loading || !name.trim()}
+                  className="px-4 py-2 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50">
+                  {loading ? '创建中...' : '创建'}
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
       </div>
     </div>
   )
