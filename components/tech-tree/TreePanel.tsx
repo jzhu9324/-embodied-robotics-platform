@@ -11,7 +11,49 @@ type TechNode = {
   partners?: any[]
 }
 
-// A flat list of siblings with drag-and-drop support
+// ── Inline rename input ──────────────────────────────────────────────────────
+function RenameInput({
+  nodeId,
+  initialName,
+  onDone,
+}: {
+  nodeId: string
+  initialName: string
+  onDone: () => void
+}) {
+  const [value, setValue] = useState(initialName)
+  const [saving, setSaving] = useState(false)
+
+  async function save() {
+    const trimmed = value.trim()
+    if (!trimmed || trimmed === initialName) { onDone(); return }
+    setSaving(true)
+    await fetch(`/api/tech-nodes/${nodeId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: trimmed }),
+    })
+    // Refresh is handled by parent via onDone → router.refresh()
+    onDone()
+  }
+
+  return (
+    <input
+      autoFocus
+      className="flex-1 text-[13px] font-semibold border border-blue-400 rounded px-1.5 py-0 h-6 focus:outline-none focus:ring-1 focus:ring-blue-400 bg-white"
+      value={value}
+      onChange={e => setValue(e.target.value)}
+      onBlur={save}
+      onKeyDown={e => {
+        if (e.key === 'Enter') save()
+        if (e.key === 'Escape') onDone()
+      }}
+      onClick={e => e.stopPropagation()}
+    />
+  )
+}
+
+// ── Drag state shared within one sibling list ────────────────────────────────
 function DraggableList({
   nodes,
   selectedId,
@@ -20,6 +62,7 @@ function DraggableList({
   onAddNode,
   onDeleteNode,
   onReorder,
+  onRenameSuccess,
   depth,
 }: {
   nodes: TechNode[]
@@ -29,88 +72,88 @@ function DraggableList({
   onAddNode: (parentId: string | null) => void
   onDeleteNode?: (nodeId: string) => void
   onReorder: (siblings: { id: string; order: number }[]) => void
+  onRenameSuccess: () => void
   depth: number
 }) {
   const [draggedId, setDraggedId] = useState<string | null>(null)
   const [overId, setOverId] = useState<string | null>(null)
-  const [overPosition, setOverPosition] = useState<'before' | 'after'>('after')
-  const dragCounter = useRef(0)
+  const [overPos, setOverPos] = useState<'before' | 'after'>('after')
 
-  function handleDragStart(e: React.DragEvent, id: string) {
+  function startDrag(e: React.DragEvent, id: string) {
+    e.stopPropagation()
     setDraggedId(id)
     e.dataTransfer.effectAllowed = 'move'
-    // Make drag image semi-transparent
-    const el = e.currentTarget as HTMLElement
-    e.dataTransfer.setDragImage(el, 0, 0)
   }
 
-  function handleDragEnd() {
+  function endDrag() {
     setDraggedId(null)
     setOverId(null)
-    dragCounter.current = 0
   }
 
-  function handleDragOver(e: React.DragEvent, id: string) {
+  function onDragOver(e: React.DragEvent, id: string) {
     e.preventDefault()
-    e.dataTransfer.dropEffect = 'move'
+    e.stopPropagation()
     if (id === draggedId) return
     setOverId(id)
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-    setOverPosition(e.clientY < rect.top + rect.height / 2 ? 'before' : 'after')
+    setOverPos(e.clientY < rect.top + rect.height / 2 ? 'before' : 'after')
   }
 
-  function handleDrop(targetId: string) {
-    if (!draggedId || draggedId === targetId) {
-      setDraggedId(null); setOverId(null); return
-    }
+  function onDrop(e: React.DragEvent, targetId: string) {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!draggedId || draggedId === targetId) { endDrag(); return }
 
     const ids = nodes.map(n => n.id)
-    const fromIndex = ids.indexOf(draggedId)
-    let toIndex = ids.indexOf(targetId)
-    if (fromIndex === -1 || toIndex === -1) return
+    const fromIdx = ids.indexOf(draggedId)
+    const toIdx = ids.indexOf(targetId)
+    if (fromIdx === -1 || toIdx === -1) { endDrag(); return }
 
     const newIds = [...ids]
-    newIds.splice(fromIndex, 1)
-    if (overPosition === 'after') toIndex = ids.indexOf(targetId)
-    else toIndex = ids.indexOf(targetId) - (fromIndex < ids.indexOf(targetId) ? 1 : 0)
-    const insertAt = overPosition === 'before'
+    newIds.splice(fromIdx, 1)
+    const insertAt = overPos === 'before'
       ? newIds.indexOf(targetId)
       : newIds.indexOf(targetId) + 1
-    newIds.splice(insertAt, 0, draggedId)
+    newIds.splice(insertAt < 0 ? newIds.length : insertAt, 0, draggedId)
 
-    const reordered = newIds.map((id, i) => ({ id, order: i }))
-    onReorder(reordered)
-
-    setDraggedId(null)
-    setOverId(null)
+    onReorder(newIds.map((id, i) => ({ id, order: i })))
+    endDrag()
   }
+
+  const dropLine = <div className="h-0.5 bg-blue-400 rounded mx-2 my-0.5 pointer-events-none" />
 
   return (
     <>
-      {nodes.map(node => (
-        <NodeItem
-          key={node.id}
-          node={node}
-          selectedId={selectedId}
-          onSelect={onSelect}
-          isAdmin={isAdmin}
-          onAddNode={onAddNode}
-          onDeleteNode={onDeleteNode}
-          onReorder={onReorder}
-          depth={depth}
-          isDragging={draggedId === node.id}
-          isOver={overId === node.id}
-          overPosition={overId === node.id ? overPosition : null}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-          onDragOver={handleDragOver}
-          onDrop={handleDrop}
-        />
-      ))}
+      {nodes.map(node => {
+        const isOver = overId === node.id
+        return (
+          <div key={node.id}>
+            {isOver && overPos === 'before' && dropLine}
+            <NodeItem
+              node={node}
+              selectedId={selectedId}
+              onSelect={onSelect}
+              isAdmin={isAdmin}
+              onAddNode={onAddNode}
+              onDeleteNode={onDeleteNode}
+              onReorder={onReorder}
+              onRenameSuccess={onRenameSuccess}
+              depth={depth}
+              isDragging={draggedId === node.id}
+              onDragStartRow={startDrag}
+              onDragEndRow={endDrag}
+              onDragOverRow={onDragOver}
+              onDropRow={onDrop}
+            />
+            {isOver && overPos === 'after' && dropLine}
+          </div>
+        )
+      })}
     </>
   )
 }
 
+// ── Single node ──────────────────────────────────────────────────────────────
 function NodeItem({
   node,
   selectedId,
@@ -119,14 +162,13 @@ function NodeItem({
   onAddNode,
   onDeleteNode,
   onReorder,
+  onRenameSuccess,
   depth,
   isDragging,
-  isOver,
-  overPosition,
-  onDragStart,
-  onDragEnd,
-  onDragOver,
-  onDrop,
+  onDragStartRow,
+  onDragEndRow,
+  onDragOverRow,
+  onDropRow,
 }: {
   node: TechNode
   selectedId: string | null
@@ -135,77 +177,91 @@ function NodeItem({
   onAddNode: (parentId: string | null) => void
   onDeleteNode?: (nodeId: string) => void
   onReorder: (siblings: { id: string; order: number }[]) => void
+  onRenameSuccess: () => void
   depth: number
   isDragging: boolean
-  isOver: boolean
-  overPosition: 'before' | 'after' | null
-  onDragStart: (e: React.DragEvent, id: string) => void
-  onDragEnd: () => void
-  onDragOver: (e: React.DragEvent, id: string) => void
-  onDrop: (id: string) => void
+  onDragStartRow: (e: React.DragEvent, id: string) => void
+  onDragEndRow: () => void
+  onDragOverRow: (e: React.DragEvent, id: string) => void
+  onDropRow: (e: React.DragEvent, id: string) => void
 }) {
   const [expanded, setExpanded] = useState(true)
+  const [renaming, setRenaming] = useState(false)
   const hasChildren = node.children.length > 0
   const isRoot = depth === 0
   const isSelected = selectedId === node.id
 
-  const dropLineClass = 'h-0.5 bg-blue-400 rounded mx-1 my-0.5'
-
   if (isRoot) {
     return (
-      <div
-        className={`mb-2 transition-opacity ${isDragging ? 'opacity-40' : ''}`}
-        draggable={isAdmin}
-        onDragStart={e => onDragStart(e, node.id)}
-        onDragEnd={onDragEnd}
-        onDragOver={e => onDragOver(e, node.id)}
-        onDrop={() => onDrop(node.id)}
-      >
-        {isOver && overPosition === 'before' && <div className={dropLineClass} />}
+      <div className={`mb-2 ${isDragging ? 'opacity-40' : ''}`}>
+        {/* Draggable row — NOT wrapping children */}
         <div
           className={`group flex items-center gap-2 px-3 py-2.5 rounded-lg cursor-pointer transition-colors select-none
             ${isSelected ? 'bg-blue-50 ring-1 ring-blue-200' : 'bg-gray-50 hover:bg-gray-100'}`}
-          onClick={() => onSelect(node)}
+          draggable={isAdmin}
+          onDragStart={e => onDragStartRow(e, node.id)}
+          onDragEnd={onDragEndRow}
+          onDragOver={e => onDragOverRow(e, node.id)}
+          onDrop={e => onDropRow(e, node.id)}
+          onClick={() => !renaming && onSelect(node)}
         >
           {isAdmin && (
-            <span className="w-4 h-4 flex items-center justify-center text-gray-300 cursor-grab active:cursor-grabbing shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" title="拖拽排序">
-              ⠿
-            </span>
+            <span
+              className="text-gray-300 cursor-grab active:cursor-grabbing shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-sm"
+              title="拖拽排序"
+              onMouseDown={e => e.stopPropagation()}
+            >⠿</span>
           )}
           <button
             className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-gray-600 shrink-0 rounded"
-            onClick={(e) => { e.stopPropagation(); setExpanded(!expanded) }}
+            onClick={e => { e.stopPropagation(); setExpanded(!expanded) }}
           >
             <svg className={`w-3.5 h-3.5 transition-transform ${expanded ? 'rotate-90' : ''}`}
               fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
             </svg>
           </button>
-          <span className={`flex-1 text-[13px] font-semibold truncate ${isSelected ? 'text-blue-700' : 'text-gray-800'}`}>
-            {node.name}
-          </span>
+
+          {renaming ? (
+            <RenameInput nodeId={node.id} initialName={node.name} onDone={() => { setRenaming(false); onRenameSuccess() }} />
+          ) : (
+            <span className={`flex-1 text-[13px] font-semibold truncate ${isSelected ? 'text-blue-700' : 'text-gray-800'}`}>
+              {node.name}
+            </span>
+          )}
+
           <span className={`text-[11px] px-1.5 py-0.5 rounded-full shrink-0
             ${isSelected ? 'bg-blue-100 text-blue-600' : 'bg-white text-gray-400 border border-gray-200'}`}>
             {node._count.partners}
           </span>
-          {isAdmin && (
+
+          {isAdmin && !renaming && (
             <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 transition-all">
               <button
+                className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded"
+                onClick={e => { e.stopPropagation(); setRenaming(true) }}
+                title="重命名"
+              >
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+              </button>
+              <button
                 className="w-5 h-5 flex items-center justify-center text-blue-400 hover:text-blue-600 hover:bg-blue-100 rounded"
-                onClick={(e) => { e.stopPropagation(); onAddNode(node.id) }}
+                onClick={e => { e.stopPropagation(); onAddNode(node.id) }}
                 title="添加子节点"
               >+</button>
               {onDeleteNode && (
                 <button
                   className="w-5 h-5 flex items-center justify-center text-gray-300 hover:text-red-500 hover:bg-red-50 rounded text-xs"
-                  onClick={(e) => { e.stopPropagation(); onDeleteNode(node.id) }}
+                  onClick={e => { e.stopPropagation(); onDeleteNode(node.id) }}
                   title="删除节点"
                 >✕</button>
               )}
             </div>
           )}
         </div>
-        {isOver && overPosition === 'after' && <div className={dropLineClass} />}
 
         {expanded && hasChildren && (
           <div className="mt-1 ml-[18px] relative border-l-2 border-gray-200">
@@ -217,6 +273,7 @@ function NodeItem({
               onAddNode={onAddNode}
               onDeleteNode={onDeleteNode}
               onReorder={onReorder}
+              onRenameSuccess={onRenameSuccess}
               depth={depth + 1}
             />
           </div>
@@ -225,80 +282,83 @@ function NodeItem({
     )
   }
 
-  // Non-root node
+  // Non-root
   return (
-    <div
-      draggable={isAdmin}
-      onDragStart={e => onDragStart(e, node.id)}
-      onDragEnd={onDragEnd}
-      onDragOver={e => onDragOver(e, node.id)}
-      onDrop={() => onDrop(node.id)}
-      className={`transition-opacity ${isDragging ? 'opacity-40' : ''}`}
-    >
-      {isOver && overPosition === 'before' && (
-        <div className="relative">
-          <div className="absolute left-0 top-[8px] w-2.5 h-0.5 bg-gray-200" />
-          <div className="pl-3"><div className={dropLineClass} /></div>
-        </div>
-      )}
-      <div className="relative">
-        <div className="absolute left-0 top-[15px] w-2.5 h-0.5 bg-gray-200" />
-        <div className="pl-3">
-          <div
-            className={`group flex items-center gap-1.5 py-[7px] pr-2 rounded-md cursor-pointer transition-colors select-none
-              ${isSelected ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-50 text-gray-600'}`}
-            onClick={() => onSelect(node)}
+    <div className={`relative ${isDragging ? 'opacity-40' : ''}`}>
+      <div className="absolute left-0 top-[15px] w-2.5 h-0.5 bg-gray-200 pointer-events-none" />
+      <div className="pl-3">
+        <div
+          className={`group flex items-center gap-1.5 py-[7px] pr-2 rounded-md cursor-pointer transition-colors select-none
+            ${isSelected ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-50 text-gray-600'}`}
+          draggable={isAdmin}
+          onDragStart={e => onDragStartRow(e, node.id)}
+          onDragEnd={onDragEndRow}
+          onDragOver={e => onDragOverRow(e, node.id)}
+          onDrop={e => onDropRow(e, node.id)}
+          onClick={() => !renaming && onSelect(node)}
+        >
+          {isAdmin && (
+            <span
+              className="text-gray-300 cursor-grab active:cursor-grabbing shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-[11px]"
+              title="拖拽排序"
+              onMouseDown={e => e.stopPropagation()}
+            >⠿</span>
+          )}
+          <button
+            className="w-4 h-4 flex items-center justify-center shrink-0"
+            onClick={e => { e.stopPropagation(); if (hasChildren) setExpanded(!expanded) }}
           >
-            {isAdmin && (
-              <span className="w-3 h-3 flex items-center justify-center text-gray-300 cursor-grab active:cursor-grabbing shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-[10px]" title="拖拽排序">
-                ⠿
-              </span>
+            {hasChildren ? (
+              <svg className={`w-3 h-3 text-gray-400 transition-transform ${expanded ? 'rotate-90' : ''}`}
+                fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            ) : (
+              <span className="w-1.5 h-1.5 rounded-full bg-gray-300 inline-block" />
             )}
-            <button
-              className="w-4 h-4 flex items-center justify-center shrink-0"
-              onClick={(e) => { e.stopPropagation(); if (hasChildren) setExpanded(!expanded) }}
-            >
-              {hasChildren ? (
-                <svg className={`w-3 h-3 text-gray-400 transition-transform ${expanded ? 'rotate-90' : ''}`}
-                  fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              ) : (
-                <span className="w-1.5 h-1.5 rounded-full bg-gray-300 inline-block" />
-              )}
-            </button>
+          </button>
+
+          {renaming ? (
+            <RenameInput nodeId={node.id} initialName={node.name} onDone={() => { setRenaming(false); onRenameSuccess() }} />
+          ) : (
             <span className={`flex-1 text-[12px] truncate ${isSelected ? 'font-medium text-blue-600' : ''}`}>
               {node.name}
             </span>
-            <span className={`text-[10px] px-1.5 py-0.5 rounded-full shrink-0
-              ${isSelected ? 'bg-blue-100 text-blue-500' : 'bg-gray-100 text-gray-400'}`}>
-              {node._count.partners}
-            </span>
-            {isAdmin && (
-              <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 transition-all">
+          )}
+
+          <span className={`text-[10px] px-1.5 py-0.5 rounded-full shrink-0
+            ${isSelected ? 'bg-blue-100 text-blue-500' : 'bg-gray-100 text-gray-400'}`}>
+            {node._count.partners}
+          </span>
+
+          {isAdmin && !renaming && (
+            <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 transition-all">
+              <button
+                className="w-4 h-4 flex items-center justify-center text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded"
+                onClick={e => { e.stopPropagation(); setRenaming(true) }}
+                title="重命名"
+              >
+                <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+              </button>
+              <button
+                className="w-4 h-4 flex items-center justify-center text-blue-400 hover:text-blue-600 hover:bg-blue-50 rounded text-xs"
+                onClick={e => { e.stopPropagation(); onAddNode(node.id) }}
+                title="添加子节点"
+              >+</button>
+              {onDeleteNode && (
                 <button
-                  className="w-4 h-4 flex items-center justify-center text-blue-400 hover:text-blue-600 hover:bg-blue-50 rounded text-xs"
-                  onClick={(e) => { e.stopPropagation(); onAddNode(node.id) }}
-                  title="添加子节点"
-                >+</button>
-                {onDeleteNode && (
-                  <button
-                    className="w-4 h-4 flex items-center justify-center text-gray-300 hover:text-red-500 hover:bg-red-50 rounded text-xs"
-                    onClick={(e) => { e.stopPropagation(); onDeleteNode(node.id) }}
-                    title="删除节点"
-                  >✕</button>
-                )}
-              </div>
-            )}
-          </div>
+                  className="w-4 h-4 flex items-center justify-center text-gray-300 hover:text-red-500 hover:bg-red-50 rounded text-xs"
+                  onClick={e => { e.stopPropagation(); onDeleteNode(node.id) }}
+                  title="删除节点"
+                >✕</button>
+              )}
+            </div>
+          )}
         </div>
       </div>
-      {isOver && overPosition === 'after' && (
-        <div className="relative">
-          <div className="absolute left-0 top-[8px] w-2.5 h-0.5 bg-gray-200" />
-          <div className="pl-3"><div className={dropLineClass} /></div>
-        </div>
-      )}
 
       {expanded && hasChildren && (
         <div className="ml-[18px] relative border-l-2 border-gray-200">
@@ -310,6 +370,7 @@ function NodeItem({
             onAddNode={onAddNode}
             onDeleteNode={onDeleteNode}
             onReorder={onReorder}
+            onRenameSuccess={onRenameSuccess}
             depth={depth + 1}
           />
         </div>
@@ -318,6 +379,7 @@ function NodeItem({
   )
 }
 
+// ── TreePanel (public API) ────────────────────────────────────────────────────
 export function TreePanel({
   nodes,
   selectedId,
@@ -326,6 +388,7 @@ export function TreePanel({
   onAddNode,
   onDeleteNode,
   onReorder,
+  onRenameSuccess,
 }: {
   nodes: TechNode[]
   selectedId: string | null
@@ -334,6 +397,7 @@ export function TreePanel({
   onAddNode: (parentId: string | null) => void
   onDeleteNode?: (nodeId: string) => void
   onReorder: (siblings: { id: string; order: number }[]) => void
+  onRenameSuccess: () => void
 }) {
   return (
     <div className="w-[280px] shrink-0 bg-white rounded-xl border border-gray-200 p-3 overflow-y-auto max-h-[calc(100vh-100px)]">
@@ -348,6 +412,7 @@ export function TreePanel({
           onAddNode={onAddNode}
           onDeleteNode={onDeleteNode}
           onReorder={onReorder}
+          onRenameSuccess={onRenameSuccess}
           depth={0}
         />
       )}

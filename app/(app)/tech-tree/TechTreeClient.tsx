@@ -297,6 +297,7 @@ export function TechTreeClient({ nodes: initialNodes, role }: { nodes: FlatNode[
           onAddNode={handleAddNode}
           onDeleteNode={handleDeleteNode}
           onReorder={handleReorder}
+          onRenameSuccess={() => router.refresh()}
         />
         {selectedNode ? (
           <NodeDetail
