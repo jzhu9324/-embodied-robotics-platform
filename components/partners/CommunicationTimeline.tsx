@@ -73,13 +73,27 @@ export function CommunicationTimeline({
 
       <div className="space-y-4">
         {items.map((item) => (
-          <div key={item.id} className="flex gap-3">
+          <div key={item.id} className="flex gap-3 group/item">
             <div className="mt-1.5 w-2 h-2 rounded-full bg-blue-500 shrink-0" />
-            <div>
-              <div className="text-xs text-gray-400 mb-1">
-                {new Date(item.date).toLocaleDateString('zh-CN')} · {item.user.name ?? '未知'}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-2">
+                <div className="text-xs text-gray-400">
+                  {new Date(item.date).toLocaleDateString('zh-CN')} · {item.user.name ?? '未知'}
+                </div>
+                {isAdmin && (
+                  <button
+                    onClick={async () => {
+                      if (!confirm('确定删除该沟通记录？')) return
+                      await fetch(`/api/communications/${item.id}`, { method: 'DELETE' })
+                      setItems(prev => prev.filter(i => i.id !== item.id))
+                    }}
+                    className="opacity-0 group-hover/item:opacity-100 transition-opacity text-xs text-gray-300 hover:text-red-500 shrink-0"
+                  >
+                    删除
+                  </button>
+                )}
               </div>
-              <div className="text-sm text-gray-700">{item.summary}</div>
+              <div className="text-sm text-gray-700 mt-1">{item.summary}</div>
               {item.nextStep && (
                 <div className="text-xs text-blue-500 mt-1">→ {item.nextStep}</div>
               )}
