@@ -45,6 +45,7 @@ export function PartnerBasicInfo({
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [name, setName] = useState(initialName)
+  const [type, setType] = useState(initialType)
   const [status, setStatus] = useState(initialStatus)
   const [contactName, setContactName] = useState(initialContactName ?? '')
   const [contactTitle, setContactTitle] = useState(initialContactTitle ?? '')
@@ -54,6 +55,7 @@ export function PartnerBasicInfo({
   function handleCancel() {
     setEditing(false)
     setName(initialName)
+    setType(initialType)
     setStatus(initialStatus)
     setContactName(initialContactName ?? '')
     setContactTitle(initialContactTitle ?? '')
@@ -68,6 +70,7 @@ export function PartnerBasicInfo({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         name: name.trim() || initialName,
+        type,
         status,
         contactName: contactName.trim() || null,
         contactTitle: contactTitle.trim() || null,
@@ -92,10 +95,22 @@ export function PartnerBasicInfo({
           ) : (
             <h2 className="text-xl font-bold">{name}</h2>
           )}
-          <div className="flex gap-2 mt-2">
-            <span className="text-xs bg-purple-100 text-purple-600 px-2 py-1 rounded-full">
-              {typeLabel[initialType] ?? initialType}
-            </span>
+          <div className="flex gap-2 mt-2 flex-wrap">
+            {editing ? (
+              <select
+                className="text-xs border border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                value={type}
+                onChange={e => setType(e.target.value)}
+              >
+                <option value="COMPANY">企业</option>
+                <option value="UNIVERSITY">高校</option>
+                <option value="RESEARCH">科研机构</option>
+              </select>
+            ) : (
+              <span className="text-xs bg-purple-100 text-purple-600 px-2 py-1 rounded-full">
+                {typeLabel[type] ?? type}
+              </span>
+            )}
             <span className="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded-full">
               {techNodeName}
             </span>
